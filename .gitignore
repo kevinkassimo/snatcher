@@ -1,0 +1,8 @@
+*.swo
+*.swp
+*.png
+*.json
+phantomjs/
+phantom
+.DS_Store
+
