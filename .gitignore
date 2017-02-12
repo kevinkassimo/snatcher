@@ -1,7 +1,7 @@
 *.swo
 *.swp
 *.png
-*.json
+config.json
 phantomjs/
 phantom
 .DS_Store

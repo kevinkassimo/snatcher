@@ -1,0 +1,13 @@
+{
+    "firstname":"FIRSTNAME",
+    "lastname":"LASTNAME",
+    "email":"EMAIL",
+    "username":"MyUCLA Username", 
+    "password":"MyUCLA Password",
+    "semester":"17W",
+    "courses":[
+        "COM SCI M51A", 
+        "COM SCI 118", 
+        "MATH 170A"
+    ]
+}
