@@ -37,7 +37,6 @@ function logon(url) {
             }
             document.getElementById("logon").value = config.username;
             document.getElementById("pass").value = config.password;
-            console.log(document.querySelector("button"));
             click(document.querySelector("button"));
         }, config);
 
@@ -47,10 +46,6 @@ function logon(url) {
         setTimeout( function(){
             page.render('frontpage.png');
             loginCookie = page.cookies;
-            //var newPage = require('webpage').create();
-            //loginCookie.forEach(function(cookie) {
-            //    newPage.addCookie(cookie);
-            //});
 
             page.evaluate(function() {
                 document.querySelector("a[href='https://be.my.ucla.edu/ClassPlanner/ClassPlan.aspx']").click();
@@ -70,6 +65,7 @@ function logon(url) {
         page.evaluate(function(config, courses) {
             var sem = config.semester;
             var sel = document.getElementById("ctl00_MainContent_termSessionChooser_TermChooser");
+            console.log(sel);
             var opts = sel.options;
             for (var j = 0; j < opts.length; j++){
                 var opt = opts[j];
@@ -98,9 +94,9 @@ function logon(url) {
 
         var body = {
             "from": "Mailgun Sandbox <postmaster@sandbox64b3024307024ea38e0944d3e7d40474.mailgun.org>",
-            "to": "Zhouheng Sun <zhouhengsun@gmail.com>",
-            "subject": "Hello Zhouheng Sun",
-            "text": "Hi Zhouheng, \n This is your course scanner service to remind you that a new spot has shown up "
+            "to": config.firstname + " " + config.lastname + " <" + config.email + ">",
+            "subject": "Hello ",
+            "text": "Hi, \n This is your course scanner service to remind you that a new spot has shown up "
                 + "on your course " + name + " with capacity of " + enrollment[0] + " out of " + enrollment[1] 
                 + ". Hope you go for it real quick ! "
                 + "\n\n Best, \n Your faithful Snatcher"
@@ -164,15 +160,16 @@ function logon(url) {
                     return result;
                 }
 
-                console.log("Courses ;" + courses);
+                console.log("Courses: " + courses);
                 for (var i = 0; i < courses.length; i++) {
                     var courseinfo = courses[i];
                     var result = getCourse(courseinfo[0]);
                     if (result === null) return console.log("No info found for course " + courseinfo[0]);
 
                     var status = 0;
-                    if (result.toLowerCase().indexOf("full") === -1) {
+                    if (result.toLowerCase().indexOf("full") === -1 && result.toLowerCase().indexOf("closed") === -1) {
                         var match = /(\d+)\s*of\s*(\d+)/.exec(result);
+                        console.log("match is " + match);
                         status = [match[1], match[2]];
                     }
 
@@ -211,4 +208,4 @@ function logon(url) {
     });
 }
 
-logon(url.logon);
+logon(url.planner);
