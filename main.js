@@ -1,3 +1,5 @@
+/*eslint-env amd*/
+
 var fs = require('fs');
 var config = JSON.parse(fs.read('config.json', 'utf8'));
 console.log("Logging " + config.username + " onto myUCLA.");
