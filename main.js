@@ -24,8 +24,11 @@ phantom.cookiesEnabled = true;
 phantom.javascriptEnabled = true;
 
 console.log('All settings loaded, start with execution');
-page.onConsoleMessage = function(msg) {
-  console.log(msg);
+
+page._render = function(file) {
+  page.render(file);
+  page.render("watch.png");
+  console.log("Updated watch.png");
 }
 
 steps = [
@@ -36,30 +39,39 @@ steps = [
   },
   function(){
     console.log('Step 2 - Populate and submit the login form');
-    page.render("startPage.png");
+    page._render("startPage.png");
     var rect = page.evaluate(function(config){
       document.getElementById("logon").value=config.username;
       document.getElementById("pass").value=config.password;
       return document.forms[0].querySelector('button[name="_eventId_proceed"]').getBoundingClientRect();
     }, config);
     page.sendEvent('click', rect.left + rect.width / 2, rect.top + rect.height / 2);
-    page.render('Logon.png');
+    page._render('Logon.png');
 
   },
   function(){
     console.log("Step 3 - Wait myUCLA to login user.");
-    page.render("waitLogon.png");
+    page._render("waitLogon.png");
   },
   function(){
+    var loaded = page.evaluate(function() {
+      var sel = document.getElementById("ctl00_MainContent_termSessionChooser_TermChooser");
+      return sel;
+    });
+    if (!loaded) {
+      testindex = 2;
+      return;
+    }
+
     console.log("Step 4 - Switch to term 17S");
-    page.render("beforeSelection.png");
+    page._render("beforeSelection.png");
     page.evaluate(function(config, courses) {
         var sem = config.semester;
         var sel = document.getElementById("ctl00_MainContent_termSessionChooser_TermChooser");
         var opts = sel.options;
         for (var j = 0; j < opts.length; j++){
             var opt = opts[j];
-            log("Trying selector value " , opt.value);
+            console.log("Trying selector value " , opt.value);
             if (opt.value == sem){
                 sel.selectedIndex = j;
                 break;
@@ -71,18 +83,29 @@ steps = [
     }, config, courses);
   },
   function(){
-    console.log("Step 5 - Refresh");
-    page.reload();
-    page.render('beforeQuery.png');
+    var transform = function(str) {
+      var match = (/^(.).*(\d\d)$/).exec(str);
+      return match[2] + match[1].toUpperCase();
+    }
+    var label = page.evaluate(function() {
+      var label = document.querySelector(".term_display").innerText;
+      return label;
+    });
+    var loaded = transform(label) === config.semester;
+    if (!loaded) {
+      testindex--;
+      //console.log("Not loaded yet")
+    }
   },
   function(){
-    console.log("Step 6 - Refresh");
-    page.render('myUCLA5.png');
-    page.render('beforeQuery2.png');
+    console.log("Step 5 - Load course info");
+    //page._render('beforeQuery2.png');
+    poll();
   },
 ];
 
-interval = setInterval(executeRequestsStepByStep,50);
+
+interval = setInterval(executeRequestsStepByStep,500);
  
 function executeRequestsStepByStep(){
     if (loadInProgress == false && typeof steps[testindex] == "function") {
@@ -92,7 +115,6 @@ function executeRequestsStepByStep(){
     }
     if (typeof steps[testindex] != "function") {
         console.log("test complete!");
-        phantom.exit();
     }
 }
  
@@ -109,5 +131,111 @@ page.onLoadFinished = function() {
     console.log('Loading finished');
 };
 page.onConsoleMessage = function(msg) {
+  var noise = /(^::.*$)|(regHelp)/;
+  if (!noise.test(msg)) {
     console.log(msg);
-};
+  }
+}
+
+
+/**
+ * Get course info and send email / enroll for the user 
+ */
+
+function getCourseDOM(list, course) {
+  var result = null;
+  try {
+    for (var i = 0; i < list.length; i++) {
+      var d = list[i];
+      var classname = d.nextElementSibling.dataset.classname;
+      if (classname.indexOf(course) !== -1) {
+        result = d;
+        break;
+      }
+    }
+    result = result.querySelectorAll("tbody")[1];
+    result = result.children[0];
+    result = result.children[2].childNodes[1].textContent;
+  } catch (_) {
+    return null;
+  }
+  return result;
+}
+
+
+function getCourse(getCourseDOM, courses) {
+  var resultList = [];
+  var divlist = document.querySelectorAll(".iweBodyTable");
+  var list = [].slice.call(divlist, 0);
+
+  for (var i = 0; i < courses.length; i++) {
+    var result = getCourseDOM(list, courses[i]);
+    console.log("result = ", result);
+    if (result === null) {
+      continue;
+    }
+
+    var status = 0;
+    if (result.toLowerCase().indexOf("full") === -1 &&
+      result.toLowerCase().indexOf("closed") === -1) {
+      status = 1;
+    }
+
+    if (status !== 0) {
+      //new spots appear
+      console.log("NEW SPOT !!!!!!!!!!!!!!!!!!!! ");
+      resultList.push(courses[i]);
+    }
+  }
+
+  return resultList;
+}
+
+function poll() {
+  var result = page.evaluate(getCourse, getCourseDOM, config.courses);
+  if (result.length > 0) {
+    sendEmail(result);
+  }
+  console.log(result);
+}
+
+function sendEmail(name) {
+  function toQueryString(obj) {
+    var str = '';
+    for (var key in obj) {
+      str += key + '=' + encodeURIComponent(obj[key]) + '&';
+    }
+    return str.slice(0, str.length - 1);
+  }
+
+  var body = {
+    "from": "Mailgun Sandbox <postmaster@sandbox64b3024307024ea38e0944d3e7d40474.mailgun.org>",
+    "to": config.firstname + " " + config.lastname + " <" + config.email + ">",
+    "subject": "Hello ",
+    "text": "Hi, \n This is your course scanner service to remind you that a new spot has shown up " + 
+    "on your courses " + name + 
+    ". Hope you go for it real quick ! " + 
+    "\n\n Best, \n Your faithful Snatcher"
+  };
+
+  var gun = require('webpage').create(),
+    server = "https://api:key-c61f93d8f12742dab476c0a77fe6af12@api.mailgun.net/v3/sandbox64b3024307024ea38e0944d3e7d40474.mailgun.org/messages",
+    data = toQueryString(body);
+
+  gun.onConsoleMessage = function(msg, lineNum, sourceId) {
+    console.log('CONSOLE: ' + msg + ' (from line #' + lineNum + ' in "' + sourceId + '")');
+  };
+
+  console.log("data : " + data);
+
+  gun.open(server, 'POST', data, function(status) {
+    if (status === 'success') {
+      console.log("Email successfully sent");
+    } else {
+      console.log("Email not sent.");
+    }
+    phantom.exit();
+  });
+
+}
+

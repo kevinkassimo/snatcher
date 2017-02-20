@@ -82,7 +82,6 @@ function logon(url) {
         setTimeout(makeQuery, WAIT * 2);
     }
 
-
     function sendEmail(name, enrollment, time) {
         function toQueryString(obj) {
             var str = '';
