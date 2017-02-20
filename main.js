@@ -1,3 +1,5 @@
+/*eslint-env amd*/
+
 var fs = require('fs');
 var steps = [];
 var testindex = 0;
