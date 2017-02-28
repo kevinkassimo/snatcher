@@ -1,6 +1,10 @@
 /*eslint-env amd*/
 
 var fs = require('fs');
+var process = require("child_process");
+var spawn = process.spawn;
+var execFile = process.execFile;
+
 var steps = [];
 var testindex = 0;
 var loadInProgress = false;
@@ -19,7 +23,7 @@ var trigger = function(identity) {
 
 page.settings.userAgent = 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.157 Safari/537.36';
 page.settings.javascriptEnabled = true;
-page.settings.loadImages = false; //Script is much faster with this field set to false
+page.settings.loadImages = false; 
 phantom.cookiesEnabled = true;
 phantom.javascriptEnabled = true;
 
@@ -105,8 +109,8 @@ steps = [
     function() {
         console.log("Another round --- Wait for it");
         setTimeout(function() {
-            testindex = 3;
-            page.reload();
+            //testindex = 3;
+            //page.reload();
         }, 180000);
         
     },
@@ -223,7 +227,8 @@ function getCourse(getCourseDOM, courses) {
 function poll() {
     var result = page.evaluate(getCourse, getCourseDOM, config.courses);
     if (result.length > 0) {
-        sendEmail(result);
+        //sendEmail(result);
+        enroll();
     }
     /*for (var i = 0; i < result.length; i++) {
       var course = result[i];
@@ -276,4 +281,26 @@ function sendEmail(name) {
         }
     });
 
+}
+/*
+var child = spawn("node", ["enroll.js"]);
+
+child.stdout.on("data", function (data) {
+  console.log("spawnSTDOUT:", JSON.stringify(data))
+});
+
+child.stderr.on("data", function (data) {
+  console.log("spawnSTDERR:", JSON.stringify(data))
+});
+
+child.on("exit", function (code) {
+  console.log("spawnEXIT:", code)
+});*/
+
+function enroll() {
+    console.log("Entering Enroll");
+    execFile("phantomjs", ["enroll.js", "COM SCI", "180"], null, function (err, stdout, stderr) {
+        console.log("execFileSTDOUT:", JSON.stringify(stdout))
+        console.log("execFileSTDERR:", JSON.stringify(stderr))
+    })
 }
