@@ -1,7 +1,9 @@
 var system = require('system');
 var args = system.args;
-var area = args[4],
-	course = args[5];
+/*var area = args[4],
+	course = courseParser(args[5]);*/
+var area = "COM SCI",
+    course = courseParser("180");
 var fs = require('fs');
 var config = JSON.parse(fs.read('config.json', 'utf8'));
 
@@ -61,61 +63,41 @@ steps = [
             }
 
             $("#select_filter_subject").click();
+
+            console.log("ready to trigger");
+            var items = $("ul").filter(function(){
+                return this.id.match(/ui-id-.*/);
+            });
+            var tmp = items[0];
+            tmp.querySelector("li>a").click();
         }, config);
 
         console.log("rendered select area");
     },
     function() {
         var check = page.evaluate(function() {
-            var items = $("ul").filter(function(){
-                return this.id.match(/ui-id-.*/);
-            });
-            return items[0].querySelectorAll("li").length;
+            var label = document.getElementById("div_catalog").style.display;
+            return label;
         });
         console.log(check);
-        if (check < 1) {
+        page.render("click1.png");
+        if (check != "block") {
             testindex--;
             console.log("Not yet!");
         } else {
             console.log("YES!!");
-            page.evaluate(function(){
-                console.log("ready to trigger");
+            page.evaluate(function(area){
+                document.getElementById("select_filter_subject").value = area;
+                document.getElementById("subject_area").value = area;
+                $("#select_filter_catalog").click();
+                console.log("ready to trigger again");
                 var items = $("ul").filter(function(){
                     return this.id.match(/ui-id-.*/);
                 });
-                var tmp = items[0];
-                //tmp.querySelector("li>a").click();
-
-                var areas = tmp.querySelectorAll("li");
-                for (var i = 0; i < areas.length; i++) {
-                    var a = areas[i].querySelector("a");
-                    console.log(a.innerHTML);
-                    if (a.innerHTML.indexOf("COM SCI") !== -1) {
-                        console.log("FOUND!!");
-                        console.log(i);
-                        areas[i].click();
-                        break;
-                    }
-                }
-                //document.getElementById("subject_area").value = "COM SCI";
-                //$("#select_filter_catalog").click();
-                /*console.log("ready to trigger again");
-                var items = $("ul").filter(function(){
-                    return this.id.match(/ui-id-+/);
-                });
+                console.log(items.length);
                 var tmp = items[1];
-                var courses = tmp.querySelectorAll("li");
-                for (var i = 0; i < courses.length; i++) {
-                    var a = courses[i].querySelector("a");
-                    console.log(a.innerHTML);
-                    if (a.innerHTML.indexOf("180") !== -1) {
-                        console.log("found!!");
-                        a.click();
-                        break;
-                    }
-                }*/
-            });
-            page.render("selected area.png");
+                tmp.querySelector("li>a").click();
+            }, area);
         }
     },
     function() {
@@ -124,15 +106,17 @@ steps = [
             return label;
         });
         console.log(check);
+        page.render("click2.png");
         if (!check) {
             testindex--;
             console.log("Not yet!");
         } else {
             console.log("YES AGAIN!!");
-            page.evaluate(function(){
-                //document.getElementById("catalog").value = "180";
+            page.evaluate(function(course){
+                document.getElementById("select_filter_catalog").value = course;
+                document.getElementById("catalog").value = course;
                 $("#btn_go").click();
-            });
+            }, course);
         }
     },
     function() {
@@ -152,12 +136,53 @@ steps = [
                 var items = $("div").filter(function(){
                     return this.id.match(/.*children/)
                 });
-                for(var lec in items) {
-                    var status = lec.querySelector(".statusColumn>p").innerHTML();
+                for(var i = 0; i < items.length; i++) {
+                    var lec = items[i];
+                    var status = lec.querySelector(".statusColumn>p").innerText;
                     console.log(status);
+                    if (status.toLowerCase().indexOf("full") === -1 &&
+                        status.toLowerCase().indexOf("closed") === -1) {
+                        lec.querySelector(".enrollColumn>input").click();
+
+                        //TODO: wait until full loaded and further process 
+
+                        //console.log(lec.children[0].querySelector(".secondarySection"));
+                        //var discussions = lec.querySelector(".secondarySection").querySelectorAll(".secondary-row");
+                        console.log(lec.innerHTML);
+                        var discussions = items[i].querySelectorAll("div");
+                        console.log(discussions.length);
+                        
+                        //Check if there're any "OPEN" sections
+                        var enrolled = false;
+                        for(var j = 0; j < discussions.length; i++) {
+                            var dis = discussions[i];
+                            var status = dis.querySelector(".statusColumn>p").innerText;
+                            if (status.toLowerCase().indexOf("open") !== -1) {
+                                dis.querySelector(".enrollColumn>input").click();
+                                enrolled = true;
+                                break;
+                            }
+                        }
+                        if (enrolled)
+                            break;
+                        for(var j = 0; j < discussions.length; i++) {
+                            var dis = discussions[i];
+                            var status = dis.querySelector(".statusColumn>p").innerText;
+                            if (status.toLowerCase().indexOf("waitlist") !== -1) {
+                                dis.querySelector(".enrollColumn>input").click();
+                                enrolled = true;
+                                break;
+                            }
+                        }
+                        
+                    }
                 }
             });
+            page.render("enroll.png");
         }
+    },
+    function() {
+
     }
 ];
 
@@ -193,10 +218,20 @@ page.onConsoleMessage = function(msg) {
     }
 }
 
-var forceTrigger = function(identity) {
-    var rect = page.evaluate(function(s) {
-        return document.querySelector(s).getBoundingClientRect();
-    }, identity);
-    console.log(rect.height, rect.width);
-    page.sendEvent('click', rect.left + rect.width / 2, rect.top + rect.height * 2);
+function courseParser(s) {
+    var isM = false;
+    var MorCM = "";
+    if (s.indexOf("M") !== -1) {
+        isM = true;
+        MorCM = s.slice(0, s.indexOf('M')+1);
+        s = s.slice(s.indexOf('M')+1, s.length);
+    }
+    while(s.match(/\d/g).length < 4) {
+        s = "0"+s;
+    }
+    if (isM) {
+        return s+"  "+MorCM;
+    } else {
+        return s;
+    }
 }
