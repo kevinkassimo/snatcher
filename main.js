@@ -282,25 +282,12 @@ function sendEmail(name) {
     });
 
 }
-/*
-var child = spawn("node", ["enroll.js"]);
-
-child.stdout.on("data", function (data) {
-  console.log("spawnSTDOUT:", JSON.stringify(data))
-});
-
-child.stderr.on("data", function (data) {
-  console.log("spawnSTDERR:", JSON.stringify(data))
-});
-
-child.on("exit", function (code) {
-  console.log("spawnEXIT:", code)
-});*/
 
 function enroll() {
     console.log("Entering Enroll");
     execFile("phantomjs", ["enroll.js", "COM SCI", "180"], null, function (err, stdout, stderr) {
-        console.log("execFileSTDOUT:", JSON.stringify(stdout))
-        console.log("execFileSTDERR:", JSON.stringify(stderr))
+        //console.log("execFileSTDOUT:", JSON.stringify(stdout))
+        //console.log("execFileSTDERR:", JSON.stringify(stderr))
+        //uncomment if you want to see the ugly unformatted output
     })
 }

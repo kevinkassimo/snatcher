@@ -22,11 +22,14 @@ phantom.javascriptEnabled = true;
 
 steps = [
     function() {
-        console.log("Step 1 - Open myUCLA home page");
+        //console.log("Step 1 - Open myUCLA home page");
+        console.log("check parameters:");
+        console.log("area: "+area);
+        console.log("course: "+course);
         page.open(url, function(status) {});
     },
     function() {
-        console.log('Step 2 - Populate and submit the login form');
+        //console.log('Step 2 - Populate and submit the login form');
         var rect = page.evaluate(function(config) {
             document.getElementById("logon").value = config.username;
             document.getElementById("pass").value = config.password;
@@ -36,7 +39,7 @@ steps = [
 
     },
     function() {
-        console.log("Step 3 - Wait myUCLA to login user.");
+        //console.log("Step 3 - Wait myUCLA to login user.");
     },
     function() {
         var loaded = page.evaluate(function() {
@@ -48,14 +51,14 @@ steps = [
             return;
         }
 
-        console.log("Step 4 - Switch to term 17S");
+        //console.log("Step 4 - Switch to term 17S");
         page.evaluate(function(config) {
             var sem = config.semester;
             var sel = document.getElementById("optSelectTerm");
             var opts = sel.options;
             for (var j = 0; j < opts.length; j++) {
                 var opt = opts[j];
-                console.log("Trying selector value ", opt.value);
+                //console.log("Trying selector value ", opt.value);
                 if (opt.value == sem) {
                     sel.selectedIndex = j;
                     break;
@@ -64,7 +67,7 @@ steps = [
 
             $("#select_filter_subject").click();
 
-            console.log("ready to trigger");
+            //console.log("ready to trigger");
             var items = $("ul").filter(function(){
                 return this.id.match(/ui-id-.*/);
             });
@@ -72,29 +75,27 @@ steps = [
             tmp.querySelector("li>a").click();
         }, config);
 
-        console.log("rendered select area");
+        //console.log("rendered select area");
     },
     function() {
         var check = page.evaluate(function() {
             var label = document.getElementById("div_catalog").style.display;
             return label;
         });
-        console.log(check);
         page.render("click1.png");
         if (check != "block") {
             testindex--;
-            console.log("Not yet!");
+            //console.log("Not yet!");
         } else {
-            console.log("YES!!");
+            //console.log("YES!!");
             page.evaluate(function(area){
                 document.getElementById("select_filter_subject").value = area;
                 document.getElementById("subject_area").value = area;
                 $("#select_filter_catalog").click();
-                console.log("ready to trigger again");
+                //console.log("ready to trigger again");
                 var items = $("ul").filter(function(){
                     return this.id.match(/ui-id-.*/);
                 });
-                console.log(items.length);
                 var tmp = items[1];
                 tmp.querySelector("li>a").click();
             }, area);
@@ -105,13 +106,12 @@ steps = [
             var label = document.getElementById("catalog").value;
             return label;
         });
-        console.log(check);
         page.render("click2.png");
         if (!check) {
             testindex--;
-            console.log("Not yet!");
+            //console.log("Not yet!");
         } else {
-            console.log("YES AGAIN!!");
+            //console.log("YES AGAIN!!");
             page.evaluate(function(course){
                 document.getElementById("select_filter_catalog").value = course;
                 document.getElementById("catalog").value = course;
@@ -124,57 +124,24 @@ steps = [
             var label = document.querySelector("#class-note");
             return label;
         });
-        console.log(check);
         page.render("now.png");
-        if (!check) {
+        if (! check) {
             testindex--;
-            console.log("Not loaded yet");
+            //console.log("Not loaded yet");
         } else {
-            console.log("Course loaded");
+            //console.log("Course loaded");
         	page.render("Loaded.png");
             page.evaluate(function(){
                 var items = $("div").filter(function(){
                     return this.id.match(/.*children/)
                 });
-                for(var i = 0; i < items.length; i++) {
+                for (var i = 0; i < items.length; i++) {
                     var lec = items[i];
                     var status = lec.querySelector(".statusColumn>p").innerText;
-                    console.log(status);
+                    //console.log(status);
                     if (status.toLowerCase().indexOf("full") === -1 &&
                         status.toLowerCase().indexOf("closed") === -1) {
                         lec.querySelector(".enrollColumn>input").click();
-
-                        //TODO: wait until full loaded and further process 
-
-                        //console.log(lec.children[0].querySelector(".secondarySection"));
-                        //var discussions = lec.querySelector(".secondarySection").querySelectorAll(".secondary-row");
-                        console.log(lec.innerHTML);
-                        var discussions = items[i].querySelectorAll("div");
-                        console.log(discussions.length);
-                        
-                        //Check if there're any "OPEN" sections
-                        var enrolled = false;
-                        for(var j = 0; j < discussions.length; i++) {
-                            var dis = discussions[i];
-                            var status = dis.querySelector(".statusColumn>p").innerText;
-                            if (status.toLowerCase().indexOf("open") !== -1) {
-                                dis.querySelector(".enrollColumn>input").click();
-                                enrolled = true;
-                                break;
-                            }
-                        }
-                        if (enrolled)
-                            break;
-                        for(var j = 0; j < discussions.length; i++) {
-                            var dis = discussions[i];
-                            var status = dis.querySelector(".statusColumn>p").innerText;
-                            if (status.toLowerCase().indexOf("waitlist") !== -1) {
-                                dis.querySelector(".enrollColumn>input").click();
-                                enrolled = true;
-                                break;
-                            }
-                        }
-                        
                     }
                 }
             });
@@ -182,7 +149,88 @@ steps = [
         }
     },
     function() {
+        var check = page.evaluate(function(){
+            var items = $("div").filter(function(){
+                return this.id.match(/.*children/)
+            });
+            for(var i = 0; i < items.length; i++) {
+                var lec = items[i];
+                var status = lec.querySelector(".statusColumn>p").innerText;
+                //console.log(status);
+                if (status.toLowerCase().indexOf("full") === -1 &&
+                    status.toLowerCase().indexOf("closed") === -1) {
+                    var discussions = lec.querySelector(".secondarySection");
+                    if (discussions)
+                        discussions = discussions.querySelectorAll(".secondary-row");
+                    else
+                        discussions = null;
 
+                    if (discussions === null) {
+                        return false;
+                    }
+
+                    //Check if there're any "OPEN" sections
+                    var enrolled = false;
+                    for(var j = 0; j < discussions.length; i++) {
+                        var dis = discussions[i];
+                        var status = dis.querySelector(".statusColumn>p").innerText;
+                        if (status.toLowerCase().indexOf("open") !== -1) {
+                            dis.querySelector(".enrollColumn>input").click();
+                            enrolled = true;
+                            break;
+                        }
+                    }
+                    if (enrolled)
+                        break;
+                    for(var j = 0; j < discussions.length; i++) {
+                        var dis = discussions[i];
+                        var status = dis.querySelector(".statusColumn>p").innerText;
+                        if (status.toLowerCase().indexOf("waitlist") !== -1) {
+                            dis.querySelector(".enrollColumn>input").click();
+                            enrolled = true;
+                            break;
+                        }
+                    }
+                    if (! enrolled) {
+                        //console.log("There must be something seriously wrong!");
+                        phantom.exit();
+                    }
+                }
+            }
+            return true;
+        });
+        page.render("now.png");
+        if (! check) {
+            testindex--;
+            //console.log("Not loaded yet");
+        } else {
+            //console.log("ready to enroll");
+            
+        }
+    },
+    function() {
+        var check = page.evaluate(function() {
+            var enrollBtn = $("#btn_Enroll");
+            var enrollPanel = $("div.row-fluid.enroll")[0];
+            if ((!enrollBtn) || (!enrollPanel)) {
+                //console.log(enrollPanel);
+                return false;
+            }
+            //console.log("found enroll button and panel!")
+            var checkBoxes = enrollPanel.querySelectorAll("input[type='checkbox']");
+            for (var i = 0; i < checkBoxes.length; i++) {
+                checkBoxes[i].click();
+            }
+            enrollBtn.click();
+            return true;
+        });
+        page.render("now.png");
+        if (! check) {
+            testindex--;
+            //console.log("enroll not loaded yet");
+        } else {
+            //console.log("Finished action");
+        }
     }
 ];
 
@@ -194,7 +242,7 @@ function executeRequestsStepByStep() {
         testindex++;
     }
     if (typeof steps[testindex] != "function") {
-        console.log("test complete!");
+        //console.log("enroll complete!");
         phantom.exit();
     }
 }
@@ -205,16 +253,16 @@ function executeRequestsStepByStep() {
  */
 page.onLoadStarted = function() {
     loadInProgress = true;
-    console.log('Loading started');
+    //console.log('Loading started');
 };
 page.onLoadFinished = function() {
     loadInProgress = false;
-    console.log('Loading finished');
+    //console.log('Loading finished');
 };
 page.onConsoleMessage = function(msg) {
     var noise = /(^::.*$)|(regHelp)/;
     if (!noise.test(msg)) {
-        console.log(msg);
+        //console.log(msg);
     }
 }
 
